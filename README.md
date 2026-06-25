@@ -1,7 +1,7 @@
 [BLOK-7-BAB-41-50-Pembedahan-Program-Firmware.md](https://github.com/user-attachments/files/29321578/BLOK-7-BAB-41-50-Pembedahan-Program-Firmware.md)
 # BLOK VII — PEMBEDAHAN PROGRAM FIRMWARE (BAB 41–50)
 
-> Buku Modul SmartPump — Blok paling teknis. Di sini Anda membedah setiap baris firmware C++ yang berjalan di ESP32-S3: dari `config.h` (konstanta), `types.h` (struktur data), tiga modul sensor, mesin fuzzy, kontroler PID, aktuator relay, hingga `loop()` utama yang menyatukan semuanya. Setelah blok ini, Anda dapat menunjuk baris kode mana pun di layar dan menjelaskan mengapa baris itu ada.
+> Buku Modul SmartPump — Blok paling teknis. Di sini Anda membedah setiap baris firmware C++ yang berjalan di ESP32-S3: dari `config.h` (konstanta), `types.h` (struktur data), tiga modul sensor, mesin fuzzy, kontroler PID, aktuator relay, hingga `loop()` utama yang menyatukan semuanya.
 
 **Peta file dan ketergantungan:**
 ```
