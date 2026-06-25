@@ -856,33 +856,4 @@ Relay hanya diaktuasi **tiap 400ms**. Dalam 400ms, bisa naik paling banyak 1 lan
 **Hitung total**: dari 0% ke 100% butuh 100 × 400ms = 40 detik. Ini lambat secara sengaja — mencegah water hammer dan kavitasi kambuh.
 
 ---
-
-## PENUTUP BLOK VII
-
-Anda telah membedah seluruh 12 file firmware, dari konstanta terkecil hingga logika loop utama. Alur sinyal lengkap:
-
-```
-Sensor fisik (P, V, I)
-   → ADC / I²C → oversampling
-   → EMA filter
-   → [V] gravity removal → Hampel → median
-   → MF Fuzzy (pdanger, mf_V, deficit)
-   → 27 aturan Mamdani (AND=min, OR=max)
-   → Centroid CoG (151 titik) → K ∈ [0,1.5]
-   → Gate korroborasi → K tervalidasi
-   → Mesin keadaan hysteresis (1500ms confirm, 800ms hold)
-   → State kavitasi (0/1/2)
-   → FGS: interpolasi gain (Kp,Ki,Kd) dari K
-   → PID position-form (deadband, anti-windup ±2, filtered deriv α=0.15)
-   → pidToDelta → rate limiter (+1/-2 per 400ms)
-   → cavPwmCap (supervisori, -4/-3/+2 per 400ms)
-   → Recovery hold (4 detik setelah kavitasi hilang)
-   → scheduleRelay(up/down)
-   → tickRelay: IDLE→PULSE(80ms)→SETTLE(260/200ms)→IDLE
-   → Motor kontroler → kecepatan pompa
-```
-
-Setiap elemen dalam rantai ini ada alasannya. Tidak ada kode yang tidak perlu.
-
----
 *Akhir Blok VII (BAB 41–50). — Pembedahan Firmware SmartPump.*
