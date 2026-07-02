@@ -1,7 +1,7 @@
-[BLOK-7-BAB-41-50-Pembedahan-Program-Firmware.md](https://github.com/user-attachments/files/29321578/BLOK-7-BAB-41-50-Pembedahan-Program-Firmware.md)
-# BLOK VII — PEMBEDAHAN PROGRAM FIRMWARE (BAB 41–50)
+[Pembedahan-Program-Firmware.md](https://github.com/user-attachments/files/29321578/BLOK-7-BAB-41-50-Pembedahan-Program-Firmware.md)
+# PEMBEDAHAN PROGRAM FIRMWARE
 
-> Buku Modul SmartPump — Blok paling teknis. Di sini Anda membedah setiap baris firmware C++ yang berjalan di ESP32-S3: dari `config.h` (konstanta), `types.h` (struktur data), tiga modul sensor, mesin fuzzy, kontroler PID, aktuator relay, hingga `loop()` utama yang menyatukan semuanya.
+> Di sini membedah setiap baris firmware C++ yang berjalan di ESP32-S3: dari `config.h` (konstanta), `types.h` (struktur data), tiga modul sensor, mesin fuzzy, kontroler PID, aktuator relay, hingga `loop()` utama yang menyatukan semuanya.
 
 **Peta file dan ketergantungan:**
 ```
@@ -20,9 +20,9 @@ web_server.h    (HTTP handler non-blocking)             ─┘
 
 ---
 
-# BAB 41 — ARSITEKTUR PROGRAM: SINGLE-CORE NON-BLOCKING STATE MACHINE
+# ARSITEKTUR PROGRAM: SINGLE-CORE NON-BLOCKING STATE MACHINE
 
-## 41.1 Filosofi Desain
+## 1 Filosofi Desain
 
 Firmware SmartPump berprinsip **satu loop, tidak ada `delay()`**. Artinya:
 
@@ -35,7 +35,7 @@ Firmware SmartPump berprinsip **satu loop, tidak ada `delay()`**. Artinya:
 
 **Akibat desain ini:** tidak ada variabel lokal besar, tidak ada loop tunggu-sampai-selesai, semua state tersimpan di variabel global agar bisa diteruskan antar iterasi.
 
-## 41.2 Alur Setiap Iterasi Loop
+## 2 Alur Setiap Iterasi Loop
 
 ```
 loop() dipanggil ~1000×/detik
@@ -57,7 +57,7 @@ loop() dipanggil ~1000×/detik
 └─ 15. Aktuasi (tiap 400ms) — naikkan/turunkan PWM, update cavPwmCap
 ```
 
-## 41.3 Fase Operasi Pompa
+## 3 Fase Operasi Pompa
 
 Pompa tidak langsung beroperasi penuh. Ada **tiga fase berurutan sebelum deteksi aktif**:
 
@@ -78,13 +78,13 @@ Pompa tidak langsung beroperasi penuh. Ada **tiga fase berurutan sebelum deteksi
 
 ---
 
-# BAB 42 — `config.h`: SEMUA PARAMETER DALAM SATU FILE
+# `config.h`: SEMUA PARAMETER DALAM SATU FILE
 
-## 42.1 Filosofi: Satu Tempat untuk Semua Angka
+## 1 Filosofi: Satu Tempat untuk Semua Angka
 
 `config.h` adalah satu-satunya file yang boleh diubah untuk mengkonfigurasi sistem. Tidak ada "magic number" tersebar di dalam kode. Setiap `#define` memiliki nama deskriptif dan komentar penjelasan.
 
-## 42.2 Grup Konfigurasi [A]–[T]
+## 2 Grup Konfigurasi [A]–[T]
 
 ### [A] WiFi
 ```cpp
@@ -162,7 +162,7 @@ Total siklus naik = 80+260 = 340ms < 400ms (ACTUATOR_INTERVAL) → relay **pasti
 
 ---
 
-# BAB 43 — `types.h`: STRUKTUR DATA
+# `types.h`: STRUKTUR DATA
 
 ```cpp
 struct DynGains { float Kp; float Ki; float Kd; };
@@ -194,9 +194,9 @@ Satu aturan fuzzy dikodekan dalam 4 byte. Array `RULES[27]` berisi semua 27 atur
 
 ---
 
-# BAB 44 — `system_utils.h`: UTILITAS UMUM
+# `system_utils.h`: UTILITAS UMUM
 
-## 44.1 Fungsi EMA (Exponential Moving Average)
+## 1 Fungsi EMA (Exponential Moving Average)
 
 ```cpp
 float smooth(float prev, float val, float alpha) {
@@ -205,7 +205,7 @@ float smooth(float prev, float val, float alpha) {
 ```
 **EMA** adalah filter low-pass paling efisien: hanya 1 perkalian, 1 tambah, tidak butuh buffer. Formula: `s[k] = α·x[k] + (1-α)·s[k-1]`. Alpha besar → lebih mengikuti sinyal baru; alpha kecil → lebih mempertahankan nilai lama.
 
-## 44.2 ADC Oversampling
+## 2 ADC Oversampling
 
 ```cpp
 int analogReadOversampled(int pin, int n) {
@@ -216,7 +216,7 @@ int analogReadOversampled(int pin, int n) {
 ```
 ADC 12-bit ESP32 punya noise ~1–2 bit. Rata-rata 8 sampel (`CFG_P_OVERSAMPLE=8`) mengurangi noise efektif karena noise acak saling menghapus. Resolusi efektif meningkat.
 
-## 44.3 Thermal Management
+## 3 Thermal Management
 
 ```cpp
 void readChipTemp() {
@@ -235,7 +235,7 @@ void readChipTemp() {
 ```
 Dibaca tiap 5 detik (`CFG_TEMP_READ_MS=5000`). Hysteresis throttle/recover (80°C/75°C) mencegah toggling frekuensi yang berlebihan. Saat throttle, interval log juga digandakan agar beban CPU berkurang.
 
-## 44.4 Logger CSV (Ring Buffer)
+## 4 Logger CSV (Ring Buffer)
 
 ```cpp
 void logRow(...) {
@@ -248,7 +248,7 @@ void logRow(...) {
 ```
 **Ring buffer** (circular buffer): `csvHead` adalah pointer tulis yang berputar. Saat penuh (2000 baris), data terlama ditimpa. Tidak ada alokasi dinamis (`new`/`malloc`) → tidak ada fragmentasi heap. Inilah cara log dapat berjalan 2 jam tanpa memory leak.
 
-## 44.5 updateFuzzyMode() dan Bobot Sensor
+## 5 updateFuzzyMode() dan Bobot Sensor
 
 ```cpp
 void updateFuzzyWeights() {
@@ -263,9 +263,9 @@ Bobot direnormalisasi agar selalu berjumlah 1.0 meskipun ada sensor yang dinonak
 
 ---
 
-# BAB 45 — `sensor_pressure.h`: SENSOR TEKANAN WPT-83G
+# `sensor_pressure.h`: SENSOR TEKANAN WPT-83G
 
-## 45.1 Konversi ADC → kPa
+## 1 Konversi ADC → kPa
 
 ```cpp
 float computePressureRaw_kPa(int adc_p) {
@@ -285,7 +285,7 @@ float computePressureRaw_kPa(int adc_p) {
 
 **Contoh:** ADC=1000 → v_adc=0.807V → v_sensor=1.613V → p_bar=(1.613-0.5)/4×12=3.34 bar → p_kPa=334 kPa. (Nilai sangat tinggi karena sensor 12 bar dipakai di rentang 0–0.3 kPa; offset kalibrasi akan memperbaiki ini.)
 
-## 45.2 Kalibrasi (Zero + Span)
+## 2 Kalibrasi (Zero + Span)
 
 ```cpp
 float applyPressureCalibration(float p_raw_kPa) {
@@ -297,7 +297,7 @@ float applyPressureCalibration(float p_raw_kPa) {
 
 Kalibrasi disimpan di **NVS (Non-Volatile Storage)** — memori flash yang bertahan restart. Jadi kalibrasi hanya perlu dilakukan sekali, lalu tersimpan permanen.
 
-## 45.3 Moving Average 20 Sampel
+## 3 Moving Average 20 Sampel
 
 ```cpp
 float movingAvgPressure(float v) {
@@ -315,9 +315,9 @@ Mengapa moving average untuk tekanan tapi EMA untuk getaran? Tekanan lebih stabi
 
 ---
 
-# BAB 46 — `sensor_current.h`: SENSOR ARUS ACS712
+# `sensor_current.h`: SENSOR ARUS ACS712
 
-## 46.1 Prinsip ACS712
+## 1 Prinsip ACS712
 
 ACS712-5A menggunakan efek Hall: arus yang melewati konduktor internal menciptakan medan magnet yang diukur sebagai tegangan. Sensitivitas: **185 mV/A**. Tegangan offset saat arus 0 A: **2.5V**.
 
@@ -330,7 +330,7 @@ current_cached = (v_sense - acs_offset) / CFG_ACS_SENSITIVITY;
 - `acs_offset`: tegangan offset yang dikalibrasi (≈2.48V bukan persis 2.5V)
 - Dibagi 0.185 V/A → arus dalam Ampere
 
-## 46.2 Auto-Koreksi Offset Drift
+## 2 Auto-Koreksi Offset Drift
 
 ```cpp
 if (current_cached < 0) {
@@ -344,7 +344,7 @@ if (current_cached < 0) {
 ```
 Arus tidak boleh negatif pada pompa DC. Jika terbaca negatif >5 iterasi berturut-turut DAN pompa mati (pwmActual=0), kemungkinan offset bergeser. Sistem mengambil ulang nilai referensi (nol arus) dan memperbarui `acs_offset` secara perlahan (α=0.3). Ini **auto-calibration online** yang mencegah drift akumulatif.
 
-## 46.3 Current Deficit — Indikator Tidak Langsung Kavitasi
+## 3 Current Deficit — Indikator Tidak Langsung Kavitasi
 
 ```cpp
 float currentDeficit(float i_meas, int pwm) {
@@ -365,9 +365,9 @@ float currentDeficit(float i_meas, int pwm) {
 
 ---
 
-# BAB 47 — `sensor_vibration.h`: SENSOR VIBRASI MPU6050
+# `sensor_vibration.h`: SENSOR VIBRASI MPU6050
 
-## 47.1 Pipeline Lengkap Vibrasi
+## 1 Pipeline Lengkap Vibrasi
 
 ```
 MPU6050 (akselerasi raw ax,ay,az)
@@ -379,7 +379,7 @@ MPU6050 (akselerasi raw ax,ay,az)
   = vibration (m/s² dinamis)
 ```
 
-## 47.2 Gravity Removal — Menghapus Komponen Gravitasi
+## 2 Gravity Removal — Menghapus Komponen Gravitasi
 
 Akselerometer selalu "merasakan" gravitasi ≈9.81 m/s² di sumbu vertikal. Ini komponen DC yang tidak relevan untuk kavitasi. Cara menghapusnya:
 
@@ -397,7 +397,7 @@ float vib_pre = fabsf(vib_mag - vib_baseline);  // komponen dinamis
 
 **Mengapa nilai raw MPU ≈9.99 m/s²?** Karena gravitasi. `vib_baseline ≈ 9.81` m/s². Setelah dikurangi, komponen dinamis yang kecil (0.1–2 m/s²) menjadi terlihat. (Ini adalah pertanyaan jebakan penguji J9.)
 
-## 47.3 Hampel Filter — Deteksi Outlier Statistik
+## 3 Hampel Filter — Deteksi Outlier Statistik
 
 ```cpp
 float hampelFilter(float x) {
@@ -414,7 +414,7 @@ MAD adalah ukuran dispersi yang robust terhadap outlier (berbeda dari standar de
 
 **Contoh:** buffer = [0.3, 0.2, 0.4, 5.0, 0.3, 0.2, 0.3]. Nilai 5.0 adalah spike dari komutasi motor. Median ≈ 0.3, MAD kecil. |5.0-0.3| >> 3×MAD → diganti median 0.3. Spike tereliminasi.
 
-## 47.4 Median Filter 5-Elemen
+## 4 Median Filter 5-Elemen
 
 ```cpp
 float medianFilter5(float new_val) {
@@ -428,7 +428,7 @@ float medianFilter5(float new_val) {
 
 Filter median 5 elemen dijalankan **setelah** Hampel. Kombinasi ini memberikan perlindungan berlapis: Hampel menghapus spike ekstrem, median menghaluskan sisa fluktuasi kecil.
 
-## 47.5 Kalibrasi MPU
+## 5 Kalibrasi MPU
 
 ```cpp
 void calibrateMPU() {
@@ -442,9 +442,9 @@ Offset ini dikurangkan dari setiap pembacaan: `s_ax = smooth(s_ax, ax_raw - ax_o
 
 ---
 
-# BAB 48 — `fuzzy.h`: LOGIKA FUZZY MAMDANI
+# `fuzzy.h`: LOGIKA FUZZY MAMDANI
 
-## 48.1 MF Input: Tekanan (P)
+## 1 MF Input: Tekanan (P)
 
 Tekanan tidak menggunakan MF konvensional secara langsung. Sebagai gantinya dipakai **`pdanger`** — indeks bahaya terstandarisasi:
 
@@ -467,7 +467,7 @@ muP[1] = 1.0f - |muP[0]-muP[2]|;  // P_MED (transisi)
 
 **Mengapa diskalakan terhadap PWM?** Pada kecepatan rendah, tekanan isap secara fisik lebih rendah — bukan karena kavitasi, tapi karena pompa belum cukup kuat menghisap. Tanpa skala, setiap kecepatan rendah akan menghasilkan alarm palsu.
 
-## 48.2 MF Input: Getaran (V)
+## 2 MF Input: Getaran (V)
 
 ```cpp
 float mf_V_low(float V) {
@@ -493,7 +493,7 @@ float mf_V_high(float V) {
 | Early (onset) | 1.00 | 0.00 | 0.80 | 0.00 |
 | Severe (kuat) | 1.45 | 0.00 | 0.28 | 0.31 |
 
-## 48.3 MF Input: Arus (I) via Deficit
+## 3 MF Input: Arus (I) via Deficit
 
 ```cpp
 float def = currentDeficit(I, pwmActual);  // [0,1]
@@ -504,7 +504,7 @@ muI[1] = constrain(1.0f - muI[0] - muI[2], 0.0f, 1.0f);   // I_MED
 
 Bukan arus absolut, melainkan **defisit relatif** terhadap ekspektasi model. `muI[0]` (LOW=arus defisit besar=kavitasi) tinggi saat `deficit > 12%`.
 
-## 48.4 27 Aturan dan Evaluasi
+## 4 27 Aturan dan Evaluasi
 
 ```cpp
 static const FuzzyRule RULES[27] = {
@@ -535,7 +535,7 @@ for (int k = 0; k < 27; k++) {
 
 Tidak ada satu sensor pun yang dapat memicu SEVERE sendirian. Ini menekan false positive.
 
-## 48.5 Defuzzifikasi Centroid (CoG)
+## 5 Defuzzifikasi Centroid (CoG)
 
 ```cpp
 float numer = 0.0f, denom = 0.0f;
@@ -559,7 +559,7 @@ float K = (denom < 1e-6f) ? 0.0f : numer/denom;
 
 **Mengapa indeks integer (`yi`) bukan float `y += 0.01`?** Float 0.01 tidak dapat direpresentasikan persis dalam biner (0.01 = 0.0000001010001... berulang di basis 2). Setelah 150 langkah, `0.00 + 0.01×150 ≠ 1.50` persis — ada galat akumulatif. Dengan `yi * 0.01f`, setiap langkah dihitung dari nol → tidak ada drift.
 
-## 48.6 Gate Korroborasi
+## 6 Gate Korroborasi
 
 ```cpp
 if (eP || eI) {
@@ -573,7 +573,7 @@ if (eP || eI) {
 
 Setelah defuzzifikasi, jika sinyal konfirmasi dari P atau I lemah (<25%), indeks K diskalakan turun. Tujuannya: sinyal getaran tinggi (V) saja — mungkin dari sumber mekanis bukan kavitasi — tidak cukup memicu alarm. Harus ada "jangkar" dari P atau I.
 
-## 48.7 FGS: Fuzzy Gain Scheduling
+## 7 FGS: Fuzzy Gain Scheduling
 
 ```cpp
 float interpolateGain(float K, float yA, float yB, float yC) {
@@ -594,9 +594,9 @@ Gain menurun halus (bukan lompatan) seiring K naik. Saat K=1.15 (Severe), semua 
 
 ---
 
-# BAB 49 — `pid_control.h`: KONTROLER PID ADAPTIF
+# `pid_control.h`: KONTROLER PID ADAPTIF
 
-## 49.1 Pemilihan Mode PID
+## 1 Pemilihan Mode PID
 
 ```cpp
 String determinePIDMode() {
@@ -615,7 +615,7 @@ Mode I (arus) adalah mode utama. Mode V (getaran) adalah fallback pertama. Mode 
 
 **Mengapa arus sebagai mode utama?** Arus paling stabil dan tidak langsung dipengaruhi kavitasi (dibanding tekanan yang berosilasi). Kontroler kecepatan berbasis arus (speed control) memberikan respons yang paling konsisten.
 
-## 49.2 PID FGS Position-Form
+## 2 PID FGS Position-Form
 
 ```cpp
 float computePID_FGS(float sp, float pv, float cavIdx,
@@ -663,7 +663,7 @@ float computePID_FGS(float sp, float pv, float cavIdx,
 
 **Mengapa `satCap`?** Saat kavitasi, `cavPwmCap` menahan PWM tidak boleh naik. Jika setpoint lebih tinggi dari cavPwmCap, error selalu positif, tapi PWM tidak bisa naik → integrator terus tumbuh tanpa guna (windup). `satCap` memutus ini.
 
-## 49.3 Mesin Keadaan Hysteresis Kavitasi
+## 3 Mesin Keadaan Hysteresis Kavitasi
 
 ```cpp
 int updateCavState(float idx) {
@@ -701,7 +701,7 @@ int updateCavState(float idx) {
 
 **Contoh:** K naik ke 0.70 selama 200ms lalu turun → tidak ada transisi (belum 1500ms). K harus bertahan di atas 0.65 selama 1500ms berturut-turut untuk berpindah ke Early.
 
-## 49.4 Rate Limiter dan Konversi PID→PWM Delta
+## 4 Rate Limiter dan Konversi PID→PWM Delta
 
 ```cpp
 int pidToDelta(float du, int state) {
@@ -721,9 +721,9 @@ int applyRateLimit(int target, int actual) {
 
 ---
 
-# BAB 50 — `smart_pumpp.ino`: SETUP DAN LOOP UTAMA
+# `smart_pumpp.ino`: SETUP DAN LOOP UTAMA
 
-## 50.1 setup() — Inisialisasi Sistem
+## 1 setup() — Inisialisasi Sistem
 
 ```cpp
 void setup() {
@@ -743,7 +743,7 @@ void setup() {
 
 **Urutan penting:** kalibrasi ACS dilakukan saat pompa mati (PWM=0, `manualStop=true`). Jika kalibrasi dilakukan saat pompa hidup, offset akan salah karena ada arus motor.
 
-## 50.2 Loop() — Pembacaan Sensor
+## 2 Loop() — Pembacaan Sensor
 
 ### Siklus Alternasi ADC
 ```cpp
@@ -763,7 +763,7 @@ currentOK = !(adc_i<5 || adc_i>4090 ||
 - ADC < 5 atau > 4090: kabel putus atau short circuit
 - Arus di luar -1A hingga 6A: tidak masuk akal secara fisik
 
-## 50.3 Loop() — Logika Kavitasi
+## 3 Loop() — Logika Kavitasi
 
 ```cpp
 bool cavDetectActive = !startupMode && !stabilizing &&
@@ -779,7 +779,7 @@ int cs = cavDetectActive ? updateCavState(cavIdx) : 0;
 
 Selama startup/stabilisasi/settle timer: `cavIdx = 0`, state machine di-reset. Ini mencegah nilai sensor transien (saat kecepatan naik dari 0) memicu alarm palsu.
 
-## 50.4 Loop() — Setpoint Mode I (Adaptif per State)
+## 4 Loop() — Setpoint Mode I (Adaptif per State)
 
 ```cpp
 case 'I': {
@@ -801,7 +801,7 @@ PID kemudian mengatur arus menuju setpoint baru ini. Saat state kembali Normal, 
 
 **Mengapa bukan langsung set PWM?** PID memberikan respons yang smooth dan mempertimbangkan error aktual. Setpoint ke 70% tidak selalu berarti PWM 70% — bergantung karakteristik pompa dan kondisi saat itu.
 
-## 50.5 Loop() — Supervisori cavPwmCap
+## 5 Loop() — Supervisori cavPwmCap
 
 ```cpp
 if      (cs == 2) cavPwmCap = max(20, cavPwmCap - 4);  // Severe: turun 4/400ms
@@ -816,7 +816,7 @@ if (pwmTarget > cavPwmCap) pwmTarget = cavPwmCap;
 
 **Mengapa dua mekanisme (setpoint + cap)?** Setpoint menggerakkan PID menuju kecepatan target. Cap adalah jaring pengaman: jika PID karena alasan apapun masih mendorong PWM naik, cap mencegahnya.
 
-## 50.6 Loop() — Recovery Hold
+## 6 Loop() — Recovery Hold
 
 ```cpp
 if (cs == 0 && cavStatePrev > 0) {
@@ -829,7 +829,7 @@ if (millis() < cavRecoveryUntil && lim > pwmActual) lim = pwmActual;
 
 Saat kavitasi baru saja hilang (state turun dari 1/2 ke 0), sistem menunggu 4 detik sebelum memperbolehkan kecepatan naik lagi. Ini mencegah siklus kavitasi–pemulihan–kavitasi yang cepat (hunting). Integrator PID juga di-reset agar tidak ada "sisa" dari kondisi sebelumnya.
 
-## 50.7 Loop() — Aktuasi Relay Cadence
+## 7 Loop() — Aktuasi Relay Cadence
 
 ```cpp
 if (millis()-lastActuator > CFG_ACTUATOR_INTERVAL) {  // tiap 400ms
@@ -856,4 +856,4 @@ Relay hanya diaktuasi **tiap 400ms**. Dalam 400ms, bisa naik paling banyak 1 lan
 **Hitung total**: dari 0% ke 100% butuh 100 × 400ms = 40 detik. Ini lambat secara sengaja — mencegah water hammer dan kavitasi kambuh.
 
 ---
-*Akhir Blok VII (BAB 41–50). — Pembedahan Firmware SmartPump.*
+*Pembedahan Firmware SmartPump.*
